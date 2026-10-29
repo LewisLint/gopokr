@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math/bits"
 	"math/rand/v2"
 	"sort"
 	"strings"
@@ -34,9 +35,18 @@ var phv, dhv []int // hand values
 var b string = "\x1b[1m"
 var n int = 0
 var drawn bool = false
+var wins, losses, ties int
+var difficulty = medium
+
+const (
+	easy = iota
+	medium
+	hard
+	fuckYouMode
+)
 
 func main() {
-
+	difficulty = chooseDifficulty()
 	for q == false {
 		clear()
 		if n == 0 {
@@ -54,7 +64,7 @@ func main() {
 		fmt.Printf("\n")
 		phv = eval(ph)
 		dhv = eval(dh)
-		fmt.Printf("Your hand:\n\n")
+		printPlayerHeading()
 		//		fmt.Printf("%v\n\n\n", ph)
 		prhand(ph, false)
 		//		fmt.Printf("%d\n", phv)
@@ -87,11 +97,12 @@ func main() {
 
 		case "f", "F":
 			n = 0
+			losses++
 			clear()
 			fmt.Printf("\n")
 			phv = eval(ph)
 			dhv = eval(dh)
-			fmt.Printf("Your hand:\n\n")
+			printPlayerHeading()
 			//		fmt.Printf("%v\n\n\n", ph)
 			prhand(ph, false)
 			//		fmt.Printf("%d\n", phv)
@@ -100,9 +111,10 @@ func main() {
 			prhand(dh, false) //  prints the hand
 			fmt.Printf("\n")
 			var shit byte
-			fmt.Printf("You pussy\nClick enter to continue")
+			fmt.Printf("You pussy; the dealer wins by fold.\n")
+			fmt.Printf("Click enter to continue")
 			fmt.Scanln(&shit)
-			for shit == 0 {
+			for shit == '0' {
 			}
 			n = 0
 			continue
@@ -115,7 +127,7 @@ func main() {
 			fmt.Printf("\n")
 			phv = eval(ph)
 			dhv = eval(dh)
-			fmt.Printf("Your hand:\n\n")
+			printPlayerHeading()
 			//		fmt.Printf("%v\n\n\n", ph)
 			prhand(ph, false)
 			//		fmt.Printf("%d\n", phv)
@@ -124,41 +136,84 @@ func main() {
 			prhand(dh, false) //  prints the hand
 			fmt.Printf("\n")
 
-			//			fmt.Printf("%v\n%v\n", phv[0], dhv[0])
+			result := compare(phv, dhv)
 			var inp byte
-			// only pussies fold
-			switch {
-			case phv[0] > dhv[0]:
-				fmt.Printf("You win\nClick enter to continue")
-				fmt.Scanln(&inp)
-				if inp != 0 {
-					continue
-				}
-			case phv[0] < dhv[0]:
-				fmt.Printf("Dealer wins\nClick enter to continue")
-				fmt.Scanln(&inp)
-				if inp != 0 {
-					continue
-				}
+			switch result {
+			case 1:
+				wins++
+				fmt.Printf("You win with %s.\n", handName(phv[0]))
+			case -1:
+				losses++
+				fmt.Printf("Dealer wins with %s.\n", handName(dhv[0]))
 			default:
-				win := compare(phv, dhv)
-				switch win {
-				case 1:
-					fmt.Printf("You win\n")
-				case -1:
-					fmt.Printf("Dealer wins\n")
-				default:
-					fmt.Printf("Tie\n")
-				}
-				fmt.Printf("Click enter to continue")
-				fmt.Scanln(&inp)
-				if inp != 0 {
-					continue
-				}
+				ties++
+				fmt.Printf("Tie: both hands are %s.\n", handName(phv[0]))
+			}
+			fmt.Printf("Click enter to continue")
+			fmt.Scanln(&inp)
+			if inp != 0 {
+				continue
 			}
 
 		}
 	}
+}
+
+func chooseDifficulty() int {
+	for {
+		fmt.Print("Choose difficulty: (e)asy, (m)edium, or (h)ard: ")
+		var input string
+		if _, err := fmt.Scanln(&input); err != nil {
+			fmt.Printf("Could not read difficulty: %v\n", err)
+			return medium
+		}
+		switch strings.ToLower(input) {
+		case "e", "easy":
+			return easy
+		case "m", "medium":
+			return medium
+		case "h", "hard":
+			return hard
+		case "fuckyou":
+			return fuckYouMode
+		default:
+			fmt.Println("Please enter e, m, or h.")
+		}
+	}
+}
+
+func printPlayerHeading() {
+	played := wins + losses + ties
+	winPercent := 0.0
+	if played > 0 {
+		winPercent = float64(wins) * 100 / float64(played)
+	}
+
+	color := "\x1b[32m"
+	if winPercent < 40 {
+		color = "\x1b[31m"
+	} else if winPercent < 60 {
+		color = "\x1b[33m"
+	}
+	fmt.Printf("%sWin %.1f%%\x1b[0m — Your hand:\n\n", color, winPercent)
+}
+
+func handName(category int) string {
+	names := [...]string{
+		"high card",
+		"one pair",
+		"two pair",
+		"three of a kind",
+		"a straight",
+		"a flush",
+		"a full house",
+		"four of a kind",
+		"a straight flush",
+	}
+	if category < 0 || category >= len(names) {
+		return "an unknown hand"
+	}
+	return names[category]
 }
 
 func newd() []card {
@@ -461,98 +516,295 @@ func compare(a, b []int) int {
 }
 
 func dealer() {
-	for range 3 {
-		score := eval(dh)
-
-		if score[0] == highcard {
-			// look for near flush or straight
-			if hfd(dh) || hsd(dh) {
-				ddraw(1)
-				return
-			}
-			ddraw(3)
-			return
-		}
-		switch score[0] {
-		case highcard:
-			ddraw(3)
-			continue
-
-		case onepair:
-			pairr := score[1]
-			if pairr <= 6 {
-				ddraw(2)
-				continue
-			} else if pairr <= 10 {
-				ddraw(1)
-			} else {
-				return
-			}
-			continue
-		case twopair:
-			return
-		case threekind:
-			return
-		case straight:
-			return
-		case flush:
-			return
-		case fullhouse:
-			return
-		case fourkind:
-			return
-		case straightflush:
-			return
+	for range dealerRedrawLimit(difficulty) {
+		var discards []int
+		switch difficulty {
+		case easy:
+			discards = easyDealerDiscards(dh)
+		case hard:
+			discards = hardDealerDiscards(dh, 300)
+		case fuckYouMode:
+			discards = fuckYouDiscards(dh, ph, deck, 300)
 		default:
-			// two pair tripple, straight, flush, etc
+			discards = dealerDiscards(dh)
+		}
+		if len(discards) == 0 {
 			return
+		}
+		for _, index := range discards {
+			dh[index] = deck[0]
+			deck = deck[1:]
 		}
 	}
 }
 
-func ddraw(count int) {
-	// pick the shittiest cards and redraw them
-	for range count {
-		weak := 0
-		for i := 1; i < len(dh); i++ {
-			if dh[i].rank < dh[weak].rank {
-				weak = i
+func dealerRedrawLimit(difficulty int) int {
+	if difficulty == fuckYouMode {
+		return 5
+	}
+	return 1
+}
+
+func fuckYouDiscards(hand, opponent, available []card, trials int) []int {
+	if len(hand) != 10 || len(opponent) != 10 || trials <= 0 {
+		return nil
+	}
+
+	opponentScore := eval(opponent)
+	bestMask, bestWins := 0, -1
+	for mask := 0; mask < 1<<len(hand); mask++ {
+		discardCount := bits.OnesCount(uint(mask))
+		if discardCount > len(available) {
+			continue
+		}
+
+		wins := 0
+		for range trials {
+			drawPile := append([]card(nil), available...)
+			rand.Shuffle(len(drawPile), func(i, j int) {
+				drawPile[i], drawPile[j] = drawPile[j], drawPile[i]
+			})
+
+			candidate := append([]card(nil), hand...)
+			nextDraw := 0
+			for i := range candidate {
+				if mask&(1<<i) != 0 {
+					candidate[i] = drawPile[nextDraw]
+					nextDraw++
+				}
+			}
+			if compare(eval(candidate), opponentScore) > 0 {
+				wins++
 			}
 		}
 
-		dh[weak] = deck[0]
-		deck = deck[1:]
-	}
-}
-
-func hfd(hand []card) bool {
-	scunts := map[string]int{}
-	for _, aksfdhklasjddhksfkljsdhksffslahsakjldffgyusalhdkjffjskjdldfhsjsahsjdkfsaadfgjhahsdfhk := range hand {
-		scunts[aksfdhklasjddhksfkljsdhksffslahsakjldffgyusalhdkjffjskjdldfhsjsahsjdkfsaadfgjhahsdfhk.suit]++
-	}
-	for _, v := range scunts {
-		if v >= 4 {
-			return true
+		if wins > bestWins {
+			bestMask, bestWins = mask, wins
 		}
 	}
-	return false
+
+	keep := make([]bool, len(hand))
+	for i := range hand {
+		keep[i] = bestMask&(1<<i) == 0
+	}
+	return discardedIndexes(keep)
 }
 
-func hsd(hand []card) bool {
-	ranks := make([]int, len(hand))
+func easyDealerDiscards(hand []card) []int {
+	score := eval(hand)
+	if score[0] != highcard {
+		return nil
+	}
+
+	keep := make([]bool, len(hand))
+	highCards := make([]int, 0, 2)
 	for i, c := range hand {
-		ranks[i] = c.rank
+		if penis(c.rank) >= 11 {
+			highCards = append(highCards, i)
+		}
 	}
-	sort.Ints(ranks)
+	sort.Slice(highCards, func(i, j int) bool {
+		return penis(hand[highCards[i]].rank) > penis(hand[highCards[j]].rank)
+	})
+	for _, i := range highCards {
+		keep[i] = true
+	}
+	return discardedIndexes(keep)
+}
 
-	for i := 0; i <= len(ranks)-4; i++ {
-		window := ranks[i : i+4]
+func hardDealerDiscards(hand []card, trials int) []int {
+	if trials <= 0 || len(hand) != 5 {
+		return dealerDiscards(hand)
+	}
 
-		if window[3]-window[0] == 3 {
+	deck := make([]card, 0, 52-len(hand))
+	for _, suit := range suits {
+		for rank := 1; rank <= 13; rank++ {
+			candidate := card{rank: rank, suit: suit}
+			if !containsCard(hand, candidate) {
+				deck = append(deck, candidate)
+			}
+		}
+	}
+
+	bestMask, bestWins := 0, -1.0
+	for mask := 0; mask < 1<<len(hand); mask++ {
+		discards := bits.OnesCount(uint(mask))
+		if discards+5 > len(deck) {
+			continue
+		}
+
+		wins := 0.0
+		for range trials {
+			drawPile := append([]card(nil), deck...)
+			rand.Shuffle(len(drawPile), func(i, j int) {
+				drawPile[i], drawPile[j] = drawPile[j], drawPile[i]
+			})
+
+			dealerHand := append([]card(nil), hand...)
+			for i := range dealerHand {
+				if mask&(1<<i) != 0 {
+					dealerHand[i] = drawPile[0]
+					drawPile = drawPile[1:]
+				}
+			}
+			opponentHand := append([]card(nil), drawPile[:5]...)
+			switch compare(eval(dealerHand), eval(opponentHand)) {
+			case 1:
+				wins++
+			case 0:
+				wins += 0.5
+			}
+		}
+
+		if wins > bestWins {
+			bestMask, bestWins = mask, wins
+		}
+	}
+
+	keep := make([]bool, len(hand))
+	for i := range hand {
+		keep[i] = bestMask&(1<<i) == 0
+	}
+	return discardedIndexes(keep)
+}
+
+func containsCard(hand []card, target card) bool {
+	for _, c := range hand {
+		if c == target {
 			return true
 		}
 	}
 	return false
+}
+
+func dealerDiscards(hand []card) []int {
+	score := eval(hand)
+	keep := make([]bool, len(hand))
+	rankCounts := make(map[int]int)
+	for _, c := range hand {
+		rankCounts[c.rank]++
+	}
+
+	switch score[0] {
+	case onepair, twopair:
+		for i, c := range hand {
+			keep[i] = rankCounts[c.rank] == 2
+		}
+	case threekind:
+		for i, c := range hand {
+			keep[i] = rankCounts[c.rank] == 3
+		}
+	case fourkind:
+		for i, c := range hand {
+			keep[i] = rankCounts[c.rank] == 4
+		}
+	case highcard:
+		suitIndexes := make(map[string][]int)
+		for i, c := range hand {
+			suitIndexes[c.suit] = append(suitIndexes[c.suit], i)
+		}
+		for _, indexes := range suitIndexes {
+			if len(indexes) == 4 {
+				for _, i := range indexes {
+					keep[i] = true
+				}
+				return discardedIndexes(keep)
+			}
+		}
+
+		if indexes := straightDrawIndexes(hand); len(indexes) == 4 {
+			for _, i := range indexes {
+				keep[i] = true
+			}
+			return discardedIndexes(keep)
+		}
+
+		highCards := make([]int, 0, 2)
+		for i, c := range hand {
+			if penis(c.rank) >= 11 {
+				highCards = append(highCards, i)
+			}
+		}
+		sort.Slice(highCards, func(i, j int) bool {
+			return penis(hand[highCards[i]].rank) > penis(hand[highCards[j]].rank)
+		})
+		if len(highCards) > 2 {
+			highCards = highCards[:2]
+		}
+		if len(highCards) == 0 {
+			for i, c := range hand {
+				if c.rank == 1 {
+					highCards = append(highCards, i)
+					break
+				}
+			}
+		}
+		for _, i := range highCards {
+			keep[i] = true
+		}
+	default:
+		return nil
+	}
+
+	return discardedIndexes(keep)
+}
+
+func discardedIndexes(keep []bool) []int {
+	discards := make([]int, 0, len(keep))
+	for i, kept := range keep {
+		if !kept {
+			discards = append(discards, i)
+		}
+	}
+	return discards
+}
+
+func straightDrawIndexes(hand []card) []int {
+	best := []int(nil)
+	bestOuts := 0
+	for mask := 0; mask < 1<<len(hand); mask++ {
+		if bits.OnesCount(uint(mask)) != 4 {
+			continue
+		}
+
+		ranks := make(map[int]bool, 4)
+		indexes := make([]int, 0, 4)
+		for i, c := range hand {
+			if mask&(1<<i) == 0 {
+				continue
+			}
+			ranks[penis(c.rank)] = true
+			indexes = append(indexes, i)
+		}
+		if len(ranks) != 4 {
+			continue
+		}
+
+		outs := make(map[int]bool)
+		for low := 1; low <= 10; low++ {
+			present, missing := 0, 0
+			for rank := low; rank < low+5; rank++ {
+				held := ranks[rank]
+				if rank == 1 {
+					held = ranks[14]
+				}
+				if held {
+					present++
+				} else {
+					missing = rank
+				}
+			}
+			if present == 4 {
+				outs[missing] = true
+			}
+		}
+		if len(outs) > bestOuts {
+			best = indexes
+			bestOuts = len(outs)
+		}
+	}
+	return best
 }
 
 func penis(rank int) int {
