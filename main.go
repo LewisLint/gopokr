@@ -294,15 +294,6 @@ func eval(user []card) []int {
 	}
 
 	fuuuuuuuuuuck, hasStraight := urfat(ranks)
-	if len(ranks) == 5 {
-		hasStraight = true
-		for i := 1; i < len(ranks); i++ {
-			if ranks[i] != ranks[i-1]+1 {
-				hasStraight = false
-				break
-			}
-		}
-	}
 
 	pairs := 0
 	three := false
@@ -546,7 +537,7 @@ func dealerRedrawLimit(difficulty int) int {
 }
 
 func fuckYouDiscards(hand, opponent, available []card, trials int) []int {
-	if len(hand) != 10 || len(opponent) != 10 || trials <= 0 {
+	if len(hand) != 5 || len(opponent) != 5 || trials <= 0 {
 		return nil
 	}
 

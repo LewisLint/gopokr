@@ -86,6 +86,24 @@ func TestHandName(t *testing.T) {
 	}
 }
 
+func TestEvalAceHighStraight(t *testing.T) {
+	straightHand := []card{
+		{rank: 1, suit: "♠"}, {rank: 10, suit: "♥"}, {rank: 11, suit: "♦"},
+		{rank: 12, suit: "♣"}, {rank: 13, suit: "♠"},
+	}
+	if got, want := eval(straightHand), []int{straight, 14}; !reflect.DeepEqual(got, want) {
+		t.Errorf("eval(ace-high straight) = %v, want %v", got, want)
+	}
+
+	royalFlush := []card{
+		{rank: 1, suit: "♠"}, {rank: 10, suit: "♠"}, {rank: 11, suit: "♠"},
+		{rank: 12, suit: "♠"}, {rank: 13, suit: "♠"},
+	}
+	if got, want := eval(royalFlush), []int{straightflush, 14}; !reflect.DeepEqual(got, want) {
+		t.Errorf("eval(royal flush) = %v, want %v", got, want)
+	}
+}
+
 func TestEasyDealerDiscardsOnlyHighCardHands(t *testing.T) {
 	highCardHand := []card{
 		{rank: 2, suit: "♠"}, {rank: 5, suit: "♥"},
