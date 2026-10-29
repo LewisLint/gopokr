@@ -1,3 +1,3 @@
-module pokr
+module poker
 
 go 1.27.3
