@@ -515,7 +515,7 @@ func dealer() {
 		case hard:
 			discards = hardDealerDiscards(dh, 300)
 		case fuckYouMode:
-			discards = fuckYouDiscards(dh, ph, deck, 300)
+			discards = fuckYouDiscards(dh, ph, deck, 10_000)
 		default:
 			discards = dealerDiscards(dh)
 		}
