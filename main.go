@@ -409,6 +409,27 @@ func clear() {
 	fmt.Print("\x1b[H\x1b[2J")
 }
 
+func renderDealerProgress(current, total int) {
+	if total <= 0 {
+		fmt.Print("\r\x1b[2K---------------- 0%")
+		return
+	}
+	const width = 10
+	filled := (current * width) / total
+	if filled > width {
+		filled = width
+	}
+	fmt.Printf("\r\x1b[2K%s%s %3d%%",
+		strings.Repeat("\x1b[1;32m~\x1b[0m", filled),
+		strings.Repeat("-", width-filled),
+		(current*100)/total,
+	)
+}
+
+func clearDealerProgress() {
+	fmt.Printf("\r\x1b[2K")
+}
+
 func stats() {
 
 }
@@ -513,9 +534,9 @@ func dealer() {
 		case easy:
 			discards = easyDealerDiscards(dh)
 		case hard:
-			discards = hardDealerDiscards(dh, 300)
+			discards = hardDealerDiscards(dh, 5000)
 		case fuckYouMode:
-			discards = fuckYouDiscards(dh, ph, deck, 10_000)
+			discards = fuckYouDiscards(dh, ph, deck, 30_000)
 		default:
 			discards = dealerDiscards(dh)
 		}
@@ -543,11 +564,13 @@ func fuckYouDiscards(hand, opponent, available []card, trials int) []int {
 
 	opponentScore := eval(opponent)
 	bestMask, bestWins := 0, -1
-	for mask := 0; mask < 1<<len(hand); mask++ {
+	totalMasks := 1 << len(hand)
+	for mask := 0; mask < totalMasks; mask++ {
 		discardCount := bits.OnesCount(uint(mask))
 		if discardCount > len(available) {
 			continue
 		}
+		renderDealerProgress(mask+1, totalMasks)
 
 		wins := 0
 		for range trials {
@@ -573,6 +596,7 @@ func fuckYouDiscards(hand, opponent, available []card, trials int) []int {
 			bestMask, bestWins = mask, wins
 		}
 	}
+	clearDealerProgress()
 
 	keep := make([]bool, len(hand))
 	for i := range hand {
@@ -619,11 +643,13 @@ func hardDealerDiscards(hand []card, trials int) []int {
 	}
 
 	bestMask, bestWins := 0, -1.0
-	for mask := 0; mask < 1<<len(hand); mask++ {
+	totalMasks := 1 << len(hand)
+	for mask := 0; mask < totalMasks; mask++ {
 		discards := bits.OnesCount(uint(mask))
 		if discards+5 > len(deck) {
 			continue
 		}
+		renderDealerProgress(mask+1, totalMasks)
 
 		wins := 0.0
 		for range trials {
@@ -652,6 +678,7 @@ func hardDealerDiscards(hand []card, trials int) []int {
 			bestMask, bestWins = mask, wins
 		}
 	}
+	clearDealerProgress()
 
 	keep := make([]bool, len(hand))
 	for i := range hand {
